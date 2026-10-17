@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
+<title>Line-by-Line Tracer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: a debugger-like workbench — program and questions on the left, the teacher's log on the right; reference notes below. */
+:root {
+  --bg: #f3f5f6;
+  --surface: #ffffff;
+  --ink: #16212b;
+  --muted: #5b6874;
+  --line: #d9dfe3;
+  --accent: #0b6e79;
+  --accent-soft: #e0f0f1;
+  --ok: #1f7a43;
+  --ok-soft: #e3f3e8;
+  --bad: #b3261e;
+  --bad-soft: #fbe7e5;
+  --warn: #8a5a00;
+  --warn-soft: #fbf0d9;
+  --code-bg: #f8fafb;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1519; --surface: #172026; --ink: #e4eaee; --muted: #9aa8b2; --line: #2a363e;
+    --accent: #5cc3cc; --accent-soft: #143238; --ok: #6fcf8f; --ok-soft: #15301f;
+    --bad: #ff8a80; --bad-soft: #3a1714; --warn: #f0c060; --warn-soft: #33280f; --code-bg: #121a1f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1519; --surface: #172026; --ink: #e4eaee; --muted: #9aa8b2; --line: #2a363e;
+  --accent: #5cc3cc; --accent-soft: #143238; --ok: #6fcf8f; --ok-soft: #15301f;
+  --bad: #ff8a80; --bad-soft: #3a1714; --warn: #f0c060; --warn-soft: #33280f; --code-bg: #121a1f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+header h1 { font-family: var(--f-display); font-size: 30px; line-height: 1.15; margin: 0 0 6px; text-wrap: balance; letter-spacing: .01em; }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.bench { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.panel-head h2 { font-family: var(--f-display); font-size: 17px; margin: 0; letter-spacing: .02em; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { font-family: var(--f-mono); font-size: 13px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.tab:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.idea { padding: 10px 16px 0; color: var(--muted); font-size: 14px; }
+.idea b { color: var(--ink); font-weight: 600; }
+.code { margin: 12px 16px 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; padding: 10px 0; font-family: var(--f-mono); font-size: 15px; }
+.cline { display: grid; grid-template-columns: 3.2em max-content; white-space: pre; }
+.ln { color: var(--muted); text-align: right; padding-right: 1.2em; user-select: none; }
+.qrow { display: grid; grid-template-columns: 3.2em max-content; align-items: center; padding: 3px 0; }
+.qbody { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-family: var(--f-body); font-size: 14px; padding-right: 12px; }
+.caret { font-family: var(--f-mono); color: var(--accent); }
+.qlabel { color: var(--muted); }
+.cline.probe { grid-template-columns: 3.2em max-content max-content; align-items: center; padding: 2px 0; }
+.cline.probe .src { color: var(--accent); }
+.cline.probe.own .src { color: var(--ink); }
+.cline.probe .qbody { padding-left: 14px; }
+.pr-arrow { color: var(--muted); font-family: var(--f-mono); }
+.qline { display: grid; grid-template-columns: 3.2em max-content; align-items: center; padding: 4px 0; }
+.qtext { font-family: var(--f-body); font-size: 14px; color: var(--ink); }
+.code mark, .qlabel mark { background: var(--warn-soft); color: var(--ink); border-bottom: 2px solid var(--warn); border-radius: 2px; padding: 0 1px; font-family: var(--f-mono); }
+.qlabel code { font-family: var(--f-mono); color: var(--ink); font-weight: 600; }
+.qbody input { font-family: var(--f-mono); font-size: 15px; width: 9ch; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.qbody button, .btn { font-family: var(--f-body); font-size: 13px; font-weight: 500; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.ans { font-family: var(--f-mono); padding: 2px 8px; border-radius: 5px; }
+.ans.ok { background: var(--ok-soft); color: var(--ok); }
+.ans.bad { background: var(--bad-soft); color: var(--bad); }
+#logall td { white-space: nowrap; }
+details.note summary { cursor: pointer; color: var(--accent); }
+details.note p { margin: 6px 0 0; }
+#logall tr.k-right td { background: var(--ok-soft); }
+#logall tr.k-match td { background: var(--warn-soft); }
+#logall tr.k-none td { background: var(--bad-soft); }
+.legend { display: flex; flex-direction: column; gap: 4px; }
+.legend > span { display: flex; align-items: center; gap: 8px; }
+.legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
+.sw.k-right { background: var(--ok-soft); } .sw.k-match { background: var(--warn-soft); } .sw.k-none { background: var(--bad-soft); }
+.ans.auto { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.status { padding: 0 16px 16px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.log { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.log table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.log th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.log td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.log td.mono { font-family: var(--f-mono); }
+.tablebox { overflow-x: auto; }
+.empty { color: var(--muted); font-size: 14px; }
+.verdict { display: flex; flex-direction: column; gap: 10px; }
+.result { font-weight: 600; }
+.method { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.method-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.method-name { font-weight: 600; font-size: 14px; }
+.chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; }
+.chip.one { background: var(--ok-soft); color: var(--ok); }
+.chip.several { background: var(--warn-soft); color: var(--warn); }
+.chip.none { background: var(--bad-soft); color: var(--bad); }
+.modes { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--f-mono); font-size: 13px; }
+.mode { border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; }
+.mode.hit { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.note { font-size: 13px; color: var(--muted); }
+.ref { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 16px; }
+.ref article { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ref h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; }
+.ref h3 .tag { font-family: var(--f-mono); color: var(--accent); }
+.ref p { margin: 0; font-size: 14px; color: var(--muted); }
+.ref pre { margin: 0; font-family: var(--f-mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; overflow-x: auto; }
+.how { padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; font-size: 14px; }
+.how h3 { margin: 0 0 4px; font-size: 15px; }
+.how p { margin: 0; color: var(--muted); max-width: 65ch; }
+.toast { font-size: 13px; color: var(--ok); }
+.top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; }
+.titleblock { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.top h1 { font-size: 26px; margin: 0; }
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; counter-reset: s; font-size: 14px; color: var(--muted); }
+.steps li { counter-increment: s; display: flex; gap: 6px; align-items: baseline; }
+.steps li::before { content: counter(s); font-family: var(--f-mono); font-size: 12px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.who input { width: 16ch; }
+
+.outq { margin: 12px 16px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.outq label { font-weight: 600; }
+.outq input { font-family: var(--f-mono); font-size: 15px; width: 16ch; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.outq button { font-size: 13px; font-weight: 500; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
+.mode.watch { border-style: dashed; }
+.mode.watch.hit { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.group-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.subhead { padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.saved { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.saved details { border-bottom: 1px solid var(--line); padding: 6px 0; }
+.saved summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
+.saved summary .when { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.saved pre { font-family: var(--f-mono); font-size: 12.5px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; overflow-x: auto; margin: 8px 0 0; }
+.savestate { font-size: 13px; color: var(--muted); }
+.who { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.who label { font-weight: 600; }
+.who input { font-size: 14px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); width: 22ch; }
+.savestate.bad { color: var(--bad); }
+@media (prefers-reduced-motion: no-preference) { .qrow.new { animation: in .18s ease-out; } @keyframes in { from { opacity: .3; transform: translateY(-3px); } } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="titleblock">
+      <h1>Line-by-line tracer</h1>
+      <ol class="steps">
+        <li>Type what the program prints.</li>
+        <li>If it is wrong, fill in the boxes line by line.</li>
+        <li>The log shows which misconceptions explain the first wrong answer.</li>
+      </ol>
+    </div>
+    <div class="who"><label for="tester">Your name</label><input id="tester" autocomplete="name" placeholder="for the log"></div>
+  </header>
+
+  <div class="bench">
+    <section class="panel" aria-label="Exercise">
+      <div class="panel-head">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <button class="btn ghost" id="restart" type="button">Restart</button>
+      </div>
+      <div class="idea" id="idea"></div>
+      <div class="outq" id="outq"></div>
+      <div class="code" id="code" aria-live="polite"></div>
+      <div class="status"><span id="status"></span><span class="savestate" id="savestate"></span><button class="btn" id="next" type="button" hidden>Next exercise →</button></div>
+    </section>
+
+    <section class="panel" aria-label="Log">
+      <div class="panel-head">
+        <span style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h2>Log</h2>
+          <span class="tabs" role="tablist"><button class="tab" role="tab" type="button" id="lt-now" aria-selected="true">This exercise</button><button class="tab" role="tab" type="button" id="lt-all" aria-selected="false">Full log</button></span></span>
+        <span style="display:flex;gap:8px;align-items:center"><span class="toast" id="toast" hidden>Copied</span><button class="btn ghost" id="copy" type="button">Copy log</button></span>
+      </div>
+      <div class="log" id="log"></div>
+      <div class="log" id="logall" style="display:none"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Saved sessions">
+    <div class="panel-head"><h2>Saved sessions</h2><span class="note" id="savenote"></span></div>
+    <div class="saved" id="saved"><p class="empty">Finished exercises are saved here for everyone who can open this page.</p></div>
+  </section>
+
+  <section class="panel" aria-label="Misconceptions">
+    <div class="panel-head"><h2>Misconceptions the tool tries to catch</h2><span class="note">Play a student who holds one of these</span></div>
+    <div class="ref">
+      <article><h3><span class="tag">M1</span> A variable holds several values</h3>
+        <p>Each assignment adds a value; print shows all of them. In a calculation the newest value is used.</p>
+        <pre>x = 4
+x = 9      # x is "4 9"</pre></article>
+      <article><h3><span class="tag">M3</span> A variable keeps its first value</h3>
+        <p>Once a variable has a value, later assignments to it are ignored.</p>
+        <pre>x = 4
+x = 9      # x is still 4</pre></article>
+      <article><h3><span class="tag">M4</span> A variable stores the expression as text</h3>
+        <p>The right-hand side is not computed; the variable holds its text. A plain number is stored as a number.</p>
+        <pre>a = 2
+b = a * 3  # b is "a*3"</pre></article>
+      <article><h3><span class="tag">M5</span> A variable keeps the formula</h3>
+        <p>Like a spreadsheet cell: the variable is recomputed whenever it is used, so it follows later changes. <code>x = x + 1</code> is computed at once.</p>
+        <pre>x = 1
+y = x + 4  # y is 5
+x = 6      # now y is 10</pre></article>
+    </div>
+    <div class="subhead">Also recorded in the log (watch-list, outside the set)</div>
+    <div class="ref">
+      <article><h3><span class="tag">M2</span> A new value is added to the old one</h3>
+        <p>Reassigning a whole number adds it to the value already there.</p>
+        <pre>a = 3
+a = 10     # a is 13</pre></article>
+      <article><h3><span class="tag">X19</span> Assignment copies the wrong way</h3>
+        <p><code>a = b</code> is read as "copy a into b" when both already have values.</p>
+        <pre>a = 3
+b = 5
+a = b      # a is 3, b is 3</pre></article>
+
+
+    </div>
+  </section>
+
+
+</div>
+
+<script>
+const DATA = {"main": ["M1", "M3", "M4", "M5"], "watch": ["M2", "X10", "X17", "X18", "X19"], "exercises": [{"key": "E0", "code": "a = 3\nb = a + 2\na = 10\nprint(a, b)", "output": "10 5", "outputs": {"M1": "3 10 5", "M3": "3 5", "M4": "10 a+2", "M5": "10 12", "M2": "13 5", "X10": "10 5", "X17": "10 5", "X18": "10 5", "X19": "10 5"}, "idea": "the example from the meeting", "targets": ["M1", "M3", "M4", "M5"], "questions": [{"line": 1, "col": 0, "name": "a", "role": "write", "correct": "3", "i": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "ii": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "notes": {}}, {"line": 2, "col": 4, "name": "a", "role": "read", "correct": "3", "i": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "ii": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "notes": {}}, {"line": 2, "col": 0, "name": "b", "role": "write", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "a+2", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "a+2", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 3, "col": 0, "name": "a", "role": "write", "correct": "10", "i": {"M1": "3 10", "M3": "3", "M4": "10", "M5": "10", "M2": "13", "X10": "10", "X17": "10", "X18": "10", "X19": "10"}, "ii": {"M1": "3 10", "M3": "3", "M4": "10", "M5": "10", "M2": "13", "X10": "10", "X17": "10", "X18": "10", "X19": "10"}, "notes": {"M4": "would already have answered a+2 at line 2 (b), where the student answered correctly"}}, {"line": 4, "col": 6, "name": "a", "role": "read", "correct": "10", "i": {"M1": "10", "M3": "10", "M4": "10", "M5": "10", "M2": "10", "X10": "10", "X17": "10", "X18": "10", "X19": "10"}, "ii": {"M1": "3 10", "M3": "3", "M4": "10", "M5": "10", "M2": "13", "X10": "10", "X17": "10", "X18": "10", "X19": "10"}, "notes": {"M1": "would already have answered 3 10 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered a+2 at line 2 (b), where the student answered correctly", "M2": "would already have answered 13 at line 3 (a), where the student answered correctly"}}, {"line": 4, "col": 9, "name": "b", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "a+2", "M5": "12", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {"M1": "would already have answered 3 10 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered a+2 at line 2 (b), where the student answered correctly", "M2": "would already have answered 13 at line 3 (a), where the student answered correctly"}}]}, {"key": "E1", "code": "x = 4\nx = 9\nprint(x)", "output": "9", "outputs": {"M1": "4 9", "M3": "4", "M4": "9", "M5": "9", "M2": "13", "X10": "9", "X17": "9", "X18": "9", "X19": "9"}, "idea": "a variable gets a new value", "targets": ["M1", "M3"], "questions": [{"line": 1, "col": 0, "name": "x", "role": "write", "correct": "4", "i": {"M1": "4", "M3": "4", "M4": "4", "M5": "4", "M2": "4", "X10": "4", "X17": "4", "X18": "4", "X19": "4"}, "ii": {"M1": "4", "M3": "4", "M4": "4", "M5": "4", "M2": "4", "X10": "4", "X17": "4", "X18": "4", "X19": "4"}, "notes": {}}, {"line": 2, "col": 0, "name": "x", "role": "write", "correct": "9", "i": {"M1": "4 9", "M3": "4", "M4": "9", "M5": "9", "M2": "13", "X10": "9", "X17": "9", "X18": "9", "X19": "9"}, "ii": {"M1": "4 9", "M3": "4", "M4": "9", "M5": "9", "M2": "13", "X10": "9", "X17": "9", "X18": "9", "X19": "9"}, "notes": {}}, {"line": 3, "col": 6, "name": "x", "role": "read", "correct": "9", "i": {"M1": "9", "M3": "9", "M4": "9", "M5": "9", "M2": "9", "X10": "9", "X17": "9", "X18": "9", "X19": "9"}, "ii": {"M1": "4 9", "M3": "4", "M4": "9", "M5": "9", "M2": "13", "X10": "9", "X17": "9", "X18": "9", "X19": "9"}, "notes": {"M1": "would already have answered 4 9 at line 2 (x), where the student answered correctly", "M3": "would already have answered 4 at line 2 (x), where the student answered correctly", "M2": "would already have answered 13 at line 2 (x), where the student answered correctly"}}]}, {"key": "E2", "code": "a = 2\nb = a * 3\nprint(b)", "output": "6", "outputs": {"M1": "6", "M3": "6", "M4": "a*3", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "idea": "the right-hand side is computed before it is stored", "targets": ["M4"], "questions": [{"line": 1, "col": 0, "name": "a", "role": "write", "correct": "2", "i": {"M1": "2", "M3": "2", "M4": "2", "M5": "2", "M2": "2", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "ii": {"M1": "2", "M3": "2", "M4": "2", "M5": "2", "M2": "2", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "notes": {}}, {"line": 2, "col": 4, "name": "a", "role": "read", "correct": "2", "i": {"M1": "2", "M3": "2", "M4": "2", "M5": "2", "M2": "2", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "ii": {"M1": "2", "M3": "2", "M4": "2", "M5": "2", "M2": "2", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "notes": {}}, {"line": 2, "col": 0, "name": "b", "role": "write", "correct": "6", "i": {"M1": "6", "M3": "6", "M4": "a*3", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "ii": {"M1": "6", "M3": "6", "M4": "a*3", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "notes": {}}, {"line": 3, "col": 6, "name": "b", "role": "read", "correct": "6", "i": {"M1": "6", "M3": "6", "M4": "6", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "ii": {"M1": "6", "M3": "6", "M4": "a*3", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "notes": {"M4": "would already have answered a*3 at line 2 (b), where the student answered correctly"}}]}, {"key": "E3", "code": "x = 1\ny = x + 4\nx = 6\nprint(y)", "output": "5", "outputs": {"M1": "5", "M3": "5", "M4": "x+4", "M5": "10", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "idea": "y keeps its value when x changes later", "targets": ["M5"], "questions": [{"line": 1, "col": 0, "name": "x", "role": "write", "correct": "1", "i": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "ii": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "notes": {}}, {"line": 2, "col": 4, "name": "x", "role": "read", "correct": "1", "i": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "ii": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "notes": {}}, {"line": 2, "col": 0, "name": "y", "role": "write", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "x+4", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "x+4", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 3, "col": 0, "name": "x", "role": "write", "correct": "6", "i": {"M1": "1 6", "M3": "1", "M4": "6", "M5": "6", "M2": "7", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "ii": {"M1": "1 6", "M3": "1", "M4": "6", "M5": "6", "M2": "7", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "notes": {"M4": "would already have answered x+4 at line 2 (y), where the student answered correctly"}}, {"line": 4, "col": 6, "name": "y", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "x+4", "M5": "10", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {"M1": "would already have answered 1 6 at line 3 (x), where the student answered correctly", "M3": "would already have answered 1 at line 3 (x), where the student answered correctly", "M4": "would already have answered x+4 at line 2 (y), where the student answered correctly", "M2": "would already have answered 7 at line 3 (x), where the student answered correctly"}}]}, {"key": "E4", "code": "n = 5\nn = n + 2\nprint(n)", "output": "7", "outputs": {"M1": "5 7", "M3": "5", "M4": "n+2", "M5": "7", "M2": "12", "X10": "7", "X17": "7", "X18": "7", "X19": "7"}, "idea": "the same variable on both sides", "targets": ["M1", "M3", "M4"], "questions": [{"line": 1, "col": 0, "name": "n", "role": "write", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 2, "col": 4, "name": "n", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 2, "col": 0, "name": "n", "role": "write", "correct": "7", "i": {"M1": "5 7", "M3": "5", "M4": "n+2", "M5": "7", "M2": "12", "X10": "7", "X17": "7", "X18": "7", "X19": "7"}, "ii": {"M1": "5 7", "M3": "5", "M4": "n+2", "M5": "7", "M2": "12", "X10": "7", "X17": "7", "X18": "7", "X19": "7"}, "notes": {}}, {"line": 3, "col": 6, "name": "n", "role": "read", "correct": "7", "i": {"M1": "7", "M3": "7", "M4": "7", "M5": "7", "M2": "7", "X10": "7", "X17": "7", "X18": "7", "X19": "7"}, "ii": {"M1": "5 7", "M3": "5", "M4": "n+2", "M5": "7", "M2": "12", "X10": "7", "X17": "7", "X18": "7", "X19": "7"}, "notes": {"M1": "would already have answered 5 7 at line 2 (n), where the student answered correctly", "M3": "would already have answered 5 at line 2 (n), where the student answered correctly", "M4": "would already have answered n+2 at line 2 (n), where the student answered correctly", "M2": "would already have answered 12 at line 2 (n), where the student answered correctly"}}]}, {"key": "E5", "code": "a = 3\nb = 5\na = b\nb = a + 1\nprint(a, b)", "output": "5 6", "outputs": {"M1": "3 5 5 6", "M3": "3 5", "M4": "b a+1", "M5": "6 6", "M2": "8 14", "X10": "5 6", "X17": "5 6", "X18": "5 6", "X19": "3 4"}, "idea": "following several variables over several lines", "targets": ["M1", "M3", "M4", "M5"], "questions": [{"line": 1, "col": 0, "name": "a", "role": "write", "correct": "3", "i": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "ii": {"M1": "3", "M3": "3", "M4": "3", "M5": "3", "M2": "3", "X10": "3", "X17": "3", "X18": "3", "X19": "3"}, "notes": {}}, {"line": 2, "col": 0, "name": "b", "role": "write", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 3, "col": 4, "name": "b", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {}}, {"line": 3, "col": 0, "name": "a", "role": "write", "correct": "5", "i": {"M1": "3 5", "M3": "3", "M4": "b", "M5": "5", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "3"}, "ii": {"M1": "3 5", "M3": "3", "M4": "b", "M5": "5", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "3"}, "notes": {}}, {"line": 4, "col": 4, "name": "a", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "3 5", "M3": "3", "M4": "b", "M5": "5", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "3"}, "notes": {"M1": "would already have answered 3 5 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered b at line 3 (a), where the student answered correctly", "M2": "would already have answered 8 at line 3 (a), where the student answered correctly", "X19": "would already have answered 3 at line 3 (a), where the student answered correctly"}}, {"line": 4, "col": 0, "name": "b", "role": "write", "correct": "6", "i": {"M1": "5 6", "M3": "5", "M4": "a+1", "M5": "6", "M2": "11", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "ii": {"M1": "5 6", "M3": "5", "M4": "a+1", "M5": "6", "M2": "14", "X10": "6", "X17": "6", "X18": "6", "X19": "4"}, "notes": {"M1": "would already have answered 3 5 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered b at line 3 (a), where the student answered correctly", "M2": "would already have answered 8 at line 3 (a), where the student answered correctly", "X19": "would already have answered 3 at line 3 (a), where the student answered correctly"}}, {"line": 5, "col": 6, "name": "a", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "3 5", "M3": "3", "M4": "b", "M5": "6", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "3"}, "notes": {"M1": "would already have answered 3 5 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered b at line 3 (a), where the student answered correctly", "M2": "would already have answered 8 at line 3 (a), where the student answered correctly", "X19": "would already have answered 3 at line 3 (a), where the student answered correctly"}}, {"line": 5, "col": 9, "name": "b", "role": "read", "correct": "6", "i": {"M1": "6", "M3": "6", "M4": "6", "M5": "6", "M2": "6", "X10": "6", "X17": "6", "X18": "6", "X19": "6"}, "ii": {"M1": "5 6", "M3": "5", "M4": "a+1", "M5": "6", "M2": "14", "X10": "6", "X17": "6", "X18": "6", "X19": "4"}, "notes": {"M1": "would already have answered 3 5 at line 3 (a), where the student answered correctly", "M3": "would already have answered 3 at line 3 (a), where the student answered correctly", "M4": "would already have answered b at line 3 (a), where the student answered correctly", "M5": "would already have answered 6 at line 5 (a), where the student answered correctly", "M2": "would already have answered 8 at line 3 (a), where the student answered correctly", "X19": "would already have answered 3 at line 3 (a), where the student answered correctly"}}]}, {"key": "E6", "code": "a = 1\na = 2\nb = 5\na = b\nprint(a, b)", "output": "5 5", "outputs": {"M1": "1 2 5 5", "M3": "1 5", "M4": "b 5", "M5": "5 5", "M2": "8 5", "X10": "5 5", "X17": "5 5", "X18": "5 5", "X19": "2 2"}, "idea": "a = b after a has changed (separates M3 and X19)", "targets": ["M1", "M3", "X19"], "questions": [{"line": 1, "col": 0, "name": "a", "role": "write", "correct": "1", "i": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "ii": {"M1": "1", "M3": "1", "M4": "1", "M5": "1", "M2": "1", "X10": "1", "X17": "1", "X18": "1", "X19": "1"}, "notes": {}}, {"line": 2, "col": 0, "name": "a", "role": "write", "correct": "2", "i": {"M1": "1 2", "M3": "1", "M4": "2", "M5": "2", "M2": "3", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "ii": {"M1": "1 2", "M3": "1", "M4": "2", "M5": "2", "M2": "3", "X10": "2", "X17": "2", "X18": "2", "X19": "2"}, "notes": {}}, {"line": 3, "col": 0, "name": "b", "role": "write", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {"M1": "would already have answered 1 2 at line 2 (a), where the student answered correctly", "M3": "would already have answered 1 at line 2 (a), where the student answered correctly", "M2": "would already have answered 3 at line 2 (a), where the student answered correctly"}}, {"line": 4, "col": 4, "name": "b", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "notes": {"M1": "would already have answered 1 2 at line 2 (a), where the student answered correctly", "M3": "would already have answered 1 at line 2 (a), where the student answered correctly", "M2": "would already have answered 3 at line 2 (a), where the student answered correctly"}}, {"line": 4, "col": 0, "name": "a", "role": "write", "correct": "5", "i": {"M1": "2 5", "M3": "2", "M4": "b", "M5": "5", "M2": "7", "X10": "5", "X17": "5", "X18": "5", "X19": "2"}, "ii": {"M1": "1 2 5", "M3": "1", "M4": "b", "M5": "5", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "2"}, "notes": {"M1": "would already have answered 1 2 at line 2 (a), where the student answered correctly", "M3": "would already have answered 1 at line 2 (a), where the student answered correctly", "M2": "would already have answered 3 at line 2 (a), where the student answered correctly"}}, {"line": 5, "col": 6, "name": "a", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "1 2 5", "M3": "1", "M4": "b", "M5": "5", "M2": "8", "X10": "5", "X17": "5", "X18": "5", "X19": "2"}, "notes": {"M1": "would already have answered 1 2 at line 2 (a), where the student answered correctly", "M3": "would already have answered 1 at line 2 (a), where the student answered correctly", "M4": "would already have answered b at line 4 (a), where the student answered correctly", "M2": "would already have answered 3 at line 2 (a), where the student answered correctly", "X19": "would already have answered 2 at line 4 (a), where the student answered correctly"}}, {"line": 5, "col": 9, "name": "b", "role": "read", "correct": "5", "i": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "5"}, "ii": {"M1": "5", "M3": "5", "M4": "5", "M5": "5", "M2": "5", "X10": "5", "X17": "5", "X18": "5", "X19": "2"}, "notes": {"M1": "would already have answered 1 2 at line 2 (a), where the student answered correctly", "M3": "would already have answered 1 at line 2 (a), where the student answered correctly", "M4": "would already have answered b at line 4 (a), where the student answered correctly", "M2": "would already have answered 3 at line 2 (a), where the student answered correctly", "X19": "would already have answered 2 at line 4 (a), where the student answered correctly"}}]}]}
+;
+// Google Apps Script web-app URL (standalone file only); empty on the claude.ai page.
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbw9ei6-cCzTyto862yZ-ToGTnAXhrkct8_Zet08z8uk6m9tevBBZFavOPQFYNudyJyiuw/exec";
+// X10, X17, X18 need if or loops, which these exercises do not have, so they are left out.
+const MAIN = DATA.main, WATCH = DATA.watch.filter(m => ["M2", "X19"].includes(m)), ALL = MAIN.concat(WATCH);
+const VERSION = "2026-10-16";
+const EXS = DATA.exercises;
+
+// Same comparison as minterp/stepwise.py: normalize(), same(), same_output().
+function normalize(t) {
+  t = String(t).replace(/,/g, " ").replace(/['"]/g, "");
+  t = t.trim().split(/\s+/).filter(Boolean).join(" ");
+  return t.replace(/\s*([-+*/%()=<>])\s*/g, "$1");
+}
+const NUM = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+function same(a, b) {
+  const x = normalize(a), y = normalize(b);
+  if (x === y) return true;
+  return NUM.test(x) && NUM.test(y) && parseFloat(x) === parseFloat(y);
+}
+function sameOutput(a, b) {
+  const la = String(a).replace(/\|/g, "\n").split("\n").filter(s => s.trim());
+  const lb = String(b).split("\n").filter(s => s.trim());
+  return la.length === lb.length && la.every((x, i) => same(x, lb[i]));
+}
+
+const $ = id => document.getElementById(id);
+let ex = EXS[0], out = null, answers = [], stopped = false, saved = false;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function onPrint(ln) { return /^\s*print\(/.test(ex.code.split("\n")[ln - 1]); }
+function where(q) { return q.role === "read" ? (onPrint(q.line) ? "on the print line" : "on the right side") : "below the line"; }
+function label(q) { return q.role === "read" ? `<code>${esc(q.name)}</code> ${where(q)}` : `<code>print(${esc(q.name)})</code> below the line`; }
+const isWatch = m => WATCH.includes(m);
+const tagged = m => m + (isWatch(m) ? " (watch)" : "");
+
+function renderTabs() {
+  $("tabs").innerHTML = EXS.map(e =>
+    `<button class="tab" role="tab" type="button" id="tab-${e.key}" aria-selected="${e === ex}" data-key="${e.key}">${e.key}</button>`).join("");
+  $("tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => { ex = EXS.find(e => e.key === b.dataset.key); start(); });
+}
+
+function start() { out = null; answers = []; stopped = false; saved = false; $("savestate").textContent = ""; $("savestate").className = "savestate"; renderTabs(); render(); }
+
+function finished() { return (out && out.ok) || stopped || (out && answers.length >= ex.questions.length); }
+function current() { return !out || finished() ? null : ex.questions[answers.length]; }
+
+function render() {
+  $("idea").innerHTML = `<b>${esc(ex.key)}</b> · ${esc(ex.idea)}`;
+  // Step 1: the whole output
+  if (!out) {
+    $("outq").innerHTML = `<label for="outans">What does this program print?</label><input id="outans" autocomplete="off" spellcheck="false" placeholder="type the output"><button type="button" id="outcheck">Check</button>`;
+    $("outcheck").onclick = submitOutput;
+    $("outans").onkeydown = onEnter(submitOutput);
+  } else {
+    $("outq").innerHTML = `<span class="qlabel">Output:</span><span class="ans ${out.ok ? "ok" : "bad"}">${esc(out.text)}</span>` +
+      (out.ok ? `<span class="qlabel">right, line by line skipped</span>` : `<span class="qlabel">wrong, now line by line</span>`);
+  }
+  // Step 2: line by line
+  const lines = ex.code.split("\n"), cur = current();
+  let html = "";
+  // Each question is shown as an added print(...) line: reads go above the line, writes below it.
+  const probe = (q, qi, indent) => {
+    if (!out || out.ok || qi > answers.length) return "";
+    const done = answers[qi];
+    // An answered print disappears; only the wrong one stays, so the stop point is visible.
+    if (done && (done.ok || done.auto)) return "";
+    let tail;
+    if (done) tail = `<span class="qtext">What does this line print?</span><span class="ans ${done.ok ? "ok" : "bad"}">${esc(done.text)}</span>`;
+    else if (!finished()) tail = `<label class="qtext" for="answer">What does this line print?</label><input id="answer" autocomplete="off" spellcheck="false"><button type="button" id="check">Check</button>`;
+    else return "";
+    return `<div class="cline probe${done ? "" : " new"}"><span class="ln"></span><span class="src">${esc(indent)}print(${esc(q.name)})</span><span class="qbody">${tail}</span></div>`;
+  };
+  // After a wrong output, reveal the code one line at a time: up to the line being asked
+  // (or the line where the student stopped). The output step and a finished run show all lines.
+  let shown = lines.length;
+  if (out && !out.ok) {
+    if (cur) shown = cur.line;
+    else if (stopped && answers.length) shown = ex.questions[answers.length - 1].line;
+  }
+  lines.forEach((src, i) => {
+    const ln = i + 1, indent = src.match(/^\s*/)[0];
+    if (ln > shown) return;
+    // Values the line reads get boxes on the line itself (the value when the line runs; a print
+    // below the line would show the value after it ran, which X19 may already have changed);
+    // values it assigns are asked with an added print(...) below the line.
+    let boxes = "", hl = -1, asks = "";
+    ex.questions.forEach((q, qi) => {
+      if (q.line !== ln || q.role !== "read" || !out || out.ok || qi > answers.length) return;
+      const done = answers[qi];
+      if (done && done.ok && !onPrint(ln)) return;          // answered right: gone, as with the prints
+      if (!onPrint(ln)) {
+        // Right-hand side: the asked variable is highlighted in the line and asked as a question.
+        hl = q.col;
+        const tail = done ? `<span class="ans bad">${esc(done.text)}</span>`
+          : finished() ? "" : `<input id="answer" autocomplete="off" spellcheck="false"><button type="button" id="check">Check</button>`;
+        asks += `<div class="qline"><span></span><span class="qbody"><label class="qtext" for="answer">What is the value of <mark>${esc(q.name)}</mark>?</label>${tail}</span></div>`;
+        return;
+      }
+      const name = `<code>${esc(q.name)}</code>`;
+      if (done) boxes += `<span class="qlabel">${name}:</span><span class="ans ${done.auto ? "auto" : done.ok ? "ok" : "bad"}" ${done.auto ? 'title="same as before, not asked again"' : ""}>${esc(done.text)}</span>`;
+      else if (!finished()) boxes += `<label class="qlabel" for="answer">${name}:</label><input id="answer" autocomplete="off" spellcheck="false"><button type="button" id="check">Check</button>`;
+    });
+    const nm = hl >= 0 ? (src.slice(hl).match(/^\w+/) || [""])[0] : "";
+    const shownSrc = nm ? esc(src.slice(0, hl)) + `<mark>${esc(nm)}</mark>` + esc(src.slice(hl + nm.length)) : esc(src);
+    html += `<div class="cline${boxes ? " probe own" : ""}"><span class="ln">${ln}</span><span class="src">${shownSrc}</span>${boxes ? `<span class="qbody"><span class="pr-arrow">→</span>${boxes}</span>` : ""}</div>` + asks;
+    ex.questions.forEach((q, qi) => { if (q.line === ln && q.role !== "read") html += probe(q, qi, indent); });
+  });
+  $("code").innerHTML = html;
+  const inp = $("answer") || $("outans");
+  if ($("answer")) { $("check").onclick = submit; $("answer").onkeydown = onEnter(submit); }
+  // focus is moved by focusNext() after a submit, never while an input method is composing
+  const n = ex.questions.length;
+  $("status").textContent = !out ? "Step 1: type the output."
+    : out.ok ? "Done: the output is right."
+    : stopped ? "Stopped at the first wrong answer. Restart or pick another exercise."
+    : answers.length === n ? "All line answers correct." : `Line by line: question ${answers.length + 1} of ${n}`;
+  renderLog();
+  const i = EXS.indexOf(ex);
+  $("next").hidden = !finished();
+  $("next").textContent = i < EXS.length - 1 ? `Next exercise: ${EXS[i + 1].key} →` : "Back to the first exercise";
+  if (finished() && !saved) { saved = true; save(); }
+}
+
+// Vietnamese (and other) input methods: an Enter that confirms a composition must not
+// submit, and a letter still being composed must not drop into the next box.
+let lastSubmit = 0;
+function onEnter(fn) {
+  return e => {
+    if (e.key !== "Enter" || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    fn();
+  };
+}
+function focusNext(id) {
+  setTimeout(() => { const el = $(id); if (el) { el.value = ""; el.focus({ preventScroll: true }); } }, 60);
+}
+
+// On a print line, a variable is not asked again when every misconception gives the same
+// answers as the last question about it; the student's earlier answer is copied (auto).
+// A line that only copies a variable (a = b) does not ask the right-hand side: nothing is
+// computed, and X19 students read b as the variable being assigned, so the question misleads.
+function copyLine(q) {
+  const m = ex.code.split("\n")[q.line - 1].match(/^\s*\w+\s*=\s*([A-Za-z_]\w*)\s*$/);
+  return !!m && m[1] === q.name;
+}
+function repeatOf(qi) {
+  const q = ex.questions[qi];
+  if (q.role !== "read") return -1;
+  if (copyLine(q)) {
+    for (let j = qi - 1; j >= 0; j--) if (ex.questions[j].name === q.name) return j;
+    return -1;
+  }
+  if (!onPrint(q.line)) return -1;   // other right-hand sides are always asked (17 Oct)
+  let j = qi - 1;
+  while (j >= 0 && ex.questions[j].name !== q.name) j--;
+  if (j < 0 || ex.questions[j].correct !== q.correct) return -1;
+  return JSON.stringify(ex.questions[j].ii) === JSON.stringify(q.ii) ? j : -1;
+}
+function autoFill() {
+  while (out && !out.ok && !stopped && answers.length < ex.questions.length) {
+    const qi = answers.length, src = repeatOf(qi);
+    if (src < 0) return;
+    const text = answers[src].text, ok = same(text, ex.questions[qi].correct);
+    answers.push({ text, ok, auto: true });
+    if (!ok) stopped = true;
+  }
+}
+
+function submitOutput() {
+  const inp = $("outans"); const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  lastSubmit = Date.now(); inp.blur();
+  const ok = sameOutput(text, ex.output);
+  const matches = ok ? [] : ALL.filter(m => ex.outputs[m] != null && sameOutput(text, ex.outputs[m]));
+  out = { text, ok, matches };
+  autoFill();
+  render();
+  focusNext("answer");
+}
+
+function submit() {
+  const inp = $("answer"); const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  lastSubmit = Date.now(); inp.blur();
+  const q = current(); const ok = same(text, q.correct);
+  answers.push({ text, ok });
+  if (!ok) stopped = true;
+  autoFill();
+  render();
+  focusNext("answer");
+}
+
+function diagnose(q, text) {
+  return ["i", "ii"].map(key => {
+    const ans = q[key];
+    const matches = ALL.filter(m => ans[m] != null && same(ans[m], text) && !same(ans[m], q.correct));
+    return { key, name: key === "i" ? "From correct values" : "Each misconception from line 1", ans, matches,
+             notes: key === "ii" ? q.notes : {} };
+  });
+}
+function outcome(m) { return m.length === 0 ? ["none", "no match"] : m.length === 1 ? ["one", "one match"] : ["several", "several matches"]; }
+
+function modeChips(d) {
+  const chip = m => `<span class="mode${isWatch(m) ? " watch" : ""}${d.matches.includes(m) ? " hit" : ""}">${m}: ${d.ans[m] == null ? "n/a" : esc(d.ans[m])}</span>`;
+  return `<div class="group-label">Set of misconceptions</div><div class="modes">${MAIN.map(chip).join("")}</div>
+    <div class="group-label">Watch-list</div><div class="modes">${WATCH.map(chip).join("")}</div>`;
+}
+
+function renderLog() {
+  if (!out) { $("log").innerHTML = `<p class="empty">The answers appear here as the student types them.</p>`; return; }
+  // One-line summary: who, which exercise, where it stopped, what was detected
+  let state, found = "";
+  if (out.ok) state = "output right";
+  else if (stopped) {
+    const q = ex.questions[answers.length - 1], ds = diagnose(q, answers[answers.length - 1].text);
+    const m = ds.map(d => d.matches.map(tagged).join(", ") || "none");
+    found = " · detected: " + (m[0] === m[1] ? m[0] + (m[0] === "none" ? "" : " (both methods)") : `${m[0]} (i), ${m[1]} (ii)`);
+    state = `stopped at line ${q.line}`;
+  } else if (answers.length === ex.questions.length) state = "all lines right";
+  else state = `line by line, ${answers.length} of ${ex.questions.length} answered`;
+  let html = `<div class="result">${esc(tester() || "(no name)")} · ${esc(ex.key)} · ${state}${esc(found)}</div>`;
+  html += `<div class="tablebox"><table><thead><tr><th>Line</th><th>Asked</th><th>Answer</th><th>Correct</th></tr></thead><tbody>`;
+  html += `<tr><td>whole program</td><td>output</td><td class="mono"><span class="ans ${out.ok ? "ok" : "bad"}">${esc(out.text)}</span></td><td class="mono">${esc(ex.output)}</td></tr>`;
+  answers.forEach((a, i) => {
+    const q = ex.questions[i];
+    html += `<tr><td class="mono">${q.line}</td><td>${label(q)}${a.auto ? " (auto)" : ""}</td><td class="mono"><span class="ans ${a.auto ? "auto" : a.ok ? "ok" : "bad"}">${esc(a.text)}</span></td><td class="mono">${esc(q.correct)}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  if (answers.some(a => a.auto)) html += `<div class="note">(auto) = not asked: every misconception gives the same answer as the last question about this variable, so the student's earlier answer is copied.</div>`;
+  if (!out.ok) html += `<div class="note">Same output as the wrong answer: ${out.matches.length ? out.matches.map(tagged).join(", ") : "no misconception"}</div>`;
+  if (out.ok) html += `<div class="result">Output right. Line by line skipped.</div>`;
+  else if (stopped) {
+    const q = ex.questions[answers.length - 1], text = answers[answers.length - 1].text;
+    html += `<div class="verdict"><details class="note"><summary>What are (i) and (ii)?</summary><p><b>(i) From correct values:</b> the student answered every earlier line correctly, so each misconception starts from the correct memory and runs only this line. This is the method from our meeting.</p><p><b>(ii) Each misconception from line 1:</b> each misconception runs the whole program from the start with its own memory, so a mistake that started earlier but was not visible in the answers can still be caught.</p><p><i>Example (E0):</i> a student with M5 answers b = 12 at the print line. From correct values no misconception gives 12, so (i) finds nothing; M5 run from line 1 gives 12, so (ii) finds it.</p></details><div class="result">Stopped at line ${q.line}: ${esc(q.name)} = ${esc(text)} (correct: ${esc(q.correct)})</div>`;
+    diagnose(q, text).forEach(d => {
+      const [cls, word] = outcome(d.matches);
+      html += `<div class="method"><div class="method-top"><span class="method-name">(${d.key}) ${d.name}</span><span class="chip ${cls}">${word}${d.matches.length ? ": " + d.matches.map(tagged).join(", ") : ""}</span></div>
+        <div class="note">What each misconception answers here:</div>${modeChips(d)}
+        ${Object.entries(d.notes).filter(([m]) => d.matches.includes(m)).map(([m, n]) => `<div class="note">${m}: ${esc(n)}</div>`).join("")}</div>`;
+    });
+    html += `</div>`;
+  } else if (answers.length === ex.questions.length) {
+    html += `<div class="result">All line answers correct, although the output was wrong.</div>`;
+  }
+  $("log").innerHTML = html;
+}
+
+function logText() {
+  const L = [`Exercise ${ex.key} (${ex.idea})` + (tester() ? ` — ${tester()}` : ""), ...ex.code.split("\n").map((l, i) => `  ${i + 1}  ${l}`), ""];
+  if (out) L.push(`output: ${out.text}  ${out.ok ? "ok" : "WRONG (correct " + ex.output + ")" + (out.matches.length ? "  same output as: " + out.matches.map(tagged).join(", ") : "")}`);
+  answers.forEach((a, i) => { const q = ex.questions[i];
+    L.push(`line ${q.line}  ${q.role === "read" ? q.name : "print(" + q.name + ")"} ${where(q)}: ${a.text}${a.auto ? " (auto)" : ""}  ${a.ok ? "ok" : "WRONG (correct " + q.correct + ")"}`); });
+  if (out && out.ok) L.push("Output right; line by line skipped.");
+  else if (stopped) {
+    const q = ex.questions[answers.length - 1], text = answers[answers.length - 1].text;
+    diagnose(q, text).forEach(d => {
+      L.push(`(${d.key}) ${d.name}: ${outcome(d.matches)[1]}${d.matches.length ? " " + d.matches.map(tagged).join(", ") : ""}`);
+      L.push("    " + ALL.map(m => `${m}: ${d.ans[m] ?? "n/a"}`).join(", "));
+      Object.entries(d.notes).filter(([m]) => d.matches.includes(m)).forEach(([m, n]) => L.push(`    ${m}: ${n}`));
+    });
+  } else if (out && answers.length === ex.questions.length) L.push("All line answers correct.");
+  return L.join("\n");
+}
+
+function summary() {
+  if (out.ok) return { result: "output right", matches: [] };
+  if (!stopped) return { result: "lines all right", matches: [] };
+  const q = ex.questions[answers.length - 1], text = answers[answers.length - 1].text;
+  const [i, ii] = diagnose(q, text);
+  return { result: `stopped at line ${q.line}`, matches: ii.matches, matches_i: i.matches };
+}
+
+// ---------------------------------------------------------------- saving (db)
+const caps = {};
+function cap(name) {
+  if (!caps[name]) caps[name] = (async () => {
+    for (let i = 0; i < 30 && !window.claude?.use; i++) await new Promise(r => setTimeout(r, 100));
+    try { return window.claude?.use ? await window.claude.use(name) : null; } catch (e) { return null; }
+  })();
+  return caps[name];
+}
+const dbReady = () => cap("db"), userReady = () => cap("user");
+
+function tester() { return ($("tester").value || "").trim(); }
+try { $("tester").value = localStorage.getItem("tracer-name") || ""; } catch (e) {}
+$("tester").addEventListener("change", () => { try { localStorage.setItem("tracer-name", tester()); } catch (e) {} });
+
+function record() {
+  const s = summary();
+  const last = stopped ? ex.questions[answers.length - 1] : null;
+  return { version: VERSION, exercise: ex.key, when: new Date().toISOString(), name: tester(),
+    wrong: last ? { line: last.line, variable: last.name, answer: answers[answers.length - 1].text, correct: last.correct } : null,
+    matches_i_tagged: (s.matches_i || []).map(tagged), matches_ii_tagged: (s.matches || []).map(tagged),
+    same_output_tagged: out.ok ? [] : out.matches.map(tagged),
+    output: { answer: out.text, ok: out.ok, same_as: out.matches },
+    answers: answers.map((a, i) => ({ line: ex.questions[i].line, variable: ex.questions[i].name, role: ex.questions[i].role, answer: a.text, ok: a.ok, auto: !!a.auto })),
+    result: s.result, matches_ii: s.matches, matches_i: s.matches_i || [], log: logText() };
+}
+
+// ---------------------------------------------------------------- full log (same columns as the Sheet)
+const FULL_COLS = ["Time", "Name", "Exercise", "Result", "Wrong line", "Variable", "Wrong answer", "Correct",
+  "Matches (i)", "Matches (ii)", "Output answer", "Same output as", "Line answers"];
+let history = [];
+try { history = JSON.parse(localStorage.getItem("tracer-history") || "[]"); } catch (e) { history = []; }
+function fullRow(r) {
+  const w = r.wrong || {}, right = r.result === "output right" || r.result === "lines all right";
+  const lines = r.answers.map(a => `L${a.line} ${a.variable}=${a.answer}${a.auto ? " (auto)" : a.ok ? "" : " (wrong)"}`).join(" | ");
+  return { kind: right ? "right" : (r.matches_i_tagged.length + r.matches_ii_tagged.length ? "match" : "none"),
+    cells: [new Date(r.when).toLocaleString(), r.name, r.exercise, r.result, w.line ?? "", w.variable ?? "", w.answer ?? "", w.correct ?? "",
+      r.matches_i_tagged.join(", "), r.matches_ii_tagged.join(", "), r.output.answer, r.same_output_tagged.join(", "), lines] };
+}
+function renderFull() {
+  if (!history.length) { $("logall").innerHTML = `<p class="empty">Every finished exercise is added here, one row each, like the Google Sheet.</p>`; return; }
+  const legend = `<div class="note legend"><span><span class="sw k-right"></span>Right</span>
+    <span><span class="sw k-match"></span>Wrong, a misconception matches</span>
+    <span><span class="sw k-none"></span>Wrong, no match</span></div>`;
+  $("logall").innerHTML = legend + `<div class="tablebox"><table><thead><tr>${FULL_COLS.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+    history.map(h => `<tr class="k-${h.kind}">${h.cells.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
+}
+function fullText() { return [FULL_COLS, ...history.map(h => h.cells)].map(r => r.join("\t")).join("\n"); }
+let logTab = "now";
+function showLogTab(tab) {
+  logTab = tab;
+  $("lt-now").setAttribute("aria-selected", tab === "now"); $("lt-all").setAttribute("aria-selected", tab === "all");
+  // .log sets display:flex, which beats the hidden attribute, so toggle display directly
+  $("log").style.display = tab === "now" ? "" : "none"; $("logall").style.display = tab === "all" ? "" : "none";
+  $("copy").textContent = tab === "all" ? "Copy table" : "Copy log";
+}
+$("lt-now").onclick = () => showLogTab("now");
+$("lt-all").onclick = () => showLogTab("all");
+renderFull();
+
+async function save() {
+  history.unshift(fullRow(record()));
+  try { localStorage.setItem("tracer-history", JSON.stringify(history.slice(0, 300))); } catch (e) {}
+  renderFull();
+  const st = $("savestate");
+  if (SHEET_URL && SHEET_URL.startsWith("https://")) {
+    st.textContent = "Sending the log…"; st.className = "savestate";
+    try {
+      // text/plain keeps this a simple request; Apps Script reads e.postData.contents
+      await fetch(SHEET_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(record()) });
+      st.textContent = "Log sent. Thank you.";
+    } catch (e) {
+      st.textContent = "Could not send the log (no internet?). Use Copy log and send it."; st.className = "savestate bad";
+    }
+    return;
+  }
+  const db = await dbReady();
+  if (!db) { st.textContent = "Not saved here. Use Copy log and send it."; st.className = "savestate bad"; return; }
+  const user = await userReady();
+  const by = user ? await user.id() : null;
+  const s = summary();
+  const doc = { ...record(), by: by || null };
+  st.textContent = "Saving…"; st.className = "savestate";
+  try { await db.collection("sessions").add(doc); st.textContent = "Saved to the shared log."; }
+  catch (e) {
+    if (e && e.code === "unavailable") {
+      await new Promise(r => setTimeout(r, 800 + Math.random() * 800));
+      try { await db.collection("sessions").add(doc); st.textContent = "Saved to the shared log."; return; } catch (e2) { e = e2; }
+    }
+    st.textContent = e && e.code === "quota_exceeded" ? "The shared log is full. Use Copy log and send it."
+      : "Not saved: this account cannot write to the shared log. Use Copy log and send it.";
+    st.className = "savestate bad";
+  }
+}
+
+async function watchSaved() {
+  if (SHEET_URL.startsWith("https://")) { $("saved").closest("section").hidden = true; return; }
+  const db = await dbReady();
+  if (!db) { $("savenote").textContent = "Not available in this view"; return; }
+  const user = await userReady();
+  db.collection("sessions").orderBy("when", "desc").limit(200).onSnapshot(async snap => {
+    if (snap.empty) { $("saved").innerHTML = `<p class="empty">No saved sessions yet. Finish an exercise to add the first one.</p>`; return; }
+    const rows = snap.docs.map(d => d.data());
+    const ids = [...new Set(rows.map(r => r.by).filter(Boolean))];
+    const ps = user && ids.length ? await user.profiles(ids) : {};
+    const box = document.createElement("div");
+    rows.forEach(r => {
+      const det = document.createElement("details");
+      const sum = document.createElement("summary");
+      const when = document.createElement("span"); when.className = "when";
+      when.textContent = new Date(r.when).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+      const who = document.createElement("span"); who.textContent = (r.by && ps[r.by] && ps[r.by].name) || "Someone";
+      const exn = document.createElement("b"); exn.textContent = r.exercise;
+      const res = document.createElement("span"); res.className = "chip " + (r.result === "output right" || r.result === "lines all right" ? "one" : (r.matches_ii || []).length ? "several" : "none");
+      res.textContent = r.result + ((r.matches_ii || []).length ? ": " + r.matches_ii.map(tagged).join(", ") : "");
+      sum.append(when, who, exn, res);
+      const pre = document.createElement("pre"); pre.textContent = r.log || "";
+      det.append(sum, pre); box.append(det);
+    });
+    $("saved").replaceChildren(...box.childNodes);
+    $("savenote").textContent = `${rows.length} saved`;
+  }, () => { $("savenote").textContent = "Could not load saved sessions"; });
+}
+
+$("restart").onclick = start;
+$("next").onclick = () => { const i = EXS.indexOf(ex); ex = EXS[(i + 1) % EXS.length]; start(); window.scrollTo({ top: 0 }); if ($("outans")) $("outans").focus({ preventScroll: true }); };
+$("copy").onclick = () => {
+  const t = logTab === "all" ? fullText() : logText();
+  const done = () => { $("toast").hidden = false; setTimeout(() => $("toast").hidden = true, 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(done).catch(() => fallback(t, done)); else fallback(t, done);
+};
+function fallback(t, done) {
+  const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch (e) {} ta.remove();
+}
+start();
+watchSaved();
+</script>
+
+</body></html>
