@@ -82,7 +82,7 @@ header p { margin: 0; color: var(--muted); max-width: 70ch; }
 .ans { font-family: var(--f-mono); padding: 2px 8px; border-radius: 5px; }
 .ans.ok { background: var(--ok-soft); color: var(--ok); }
 .ans.bad { background: var(--bad-soft); color: var(--bad); }
-#logall td { white-space: nowrap; }
+#logall td { white-space: pre; }
 details.note summary { cursor: pointer; color: var(--accent); }
 details.note p { margin: 6px 0 0; }
 #logall tr.k-right td { background: var(--ok-soft); }
@@ -241,7 +241,7 @@ const DATA = {"main": ["M1", "M3", "M4", "M5"], "watch": ["M2", "X10", "X17", "X
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbw9ei6-cCzTyto862yZ-ToGTnAXhrkct8_Zet08z8uk6m9tevBBZFavOPQFYNudyJyiuw/exec";
 // X10, X17, X18 need if or loops, which these exercises do not have, so they are left out.
 const MAIN = DATA.main, WATCH = DATA.watch.filter(m => ["M2", "X19"].includes(m)), ALL = MAIN.concat(WATCH);
-const VERSION = "2026-10-16";
+const VERSION = "v4 · e12e3e4";   // filled in by tools/build_web.py
 const EXS = DATA.exercises;
 
 // Same comparison as minterp/stepwise.py: normalize(), same(), same_output().
@@ -533,30 +533,43 @@ function record() {
     same_output_tagged: out.ok ? [] : out.matches.map(tagged),
     output: { answer: out.text, ok: out.ok, same_as: out.matches },
     answers: answers.map((a, i) => ({ line: ex.questions[i].line, variable: ex.questions[i].name, role: ex.questions[i].role, answer: a.text, ok: a.ok, auto: !!a.auto })),
-    result: s.result, matches_ii: s.matches, matches_i: s.matches_i || [], log: logText() };
+    result: s.result, matches_ii: s.matches, matches_i: s.matches_i || [], note: noteText(), log: logText() };
+}
+// Notes for the teacher (18 Oct): the remarks of method (ii) on the modes that give the same answer
+// (e.g. the mode would have answered an earlier question differently).
+function noteText() {
+  if (!out || out.ok || !stopped) return "";
+  const q = ex.questions[answers.length - 1], text = answers[answers.length - 1].text, ds = diagnose(q, text);
+  const ii = ds[ds.length - 1];
+  const parts = Object.entries(ii.notes).filter(([m]) => ii.matches.includes(m)).map(([m, n]) => `${m}: ${n}`);
+  return parts.join(" | ");
 }
 
 // ---------------------------------------------------------------- full log (same columns as the Sheet)
-const FULL_COLS = ["Time", "Name", "Exercise", "Result", "Wrong line", "Variable", "Wrong answer", "Correct",
-  "Matches (i)", "Matches (ii)", "Output answer", "Same output as", "Line answers"];
+// Same columns and order as the Sheet "Log v3" (18 Oct). "Same answer as" = a mode gives the same
+// value; it is not proof that the student holds that misconception.
+const FULL_COLS = ["Time", "Name", "Exercise", "Result", "Output answer", "Same output as",
+  "Wrong line", "Variable", "Wrong answer", "Correct", "Same answer as (ii)", "Note", "Line answers", "Same answer as (i)"];
 let history = [];
-try { history = JSON.parse(localStorage.getItem("tracer-history") || "[]"); } catch (e) { history = []; }
+try { history = JSON.parse(localStorage.getItem("tracer-history-v3") || "[]"); } catch (e) { history = []; }
 function fullRow(r) {
   const w = r.wrong || {}, right = r.result === "output right" || r.result === "lines all right";
-  const lines = r.answers.map(a => `L${a.line} ${a.variable}=${a.answer}${a.auto ? " (auto)" : a.ok ? "" : " (wrong)"}`).join(" | ");
+  // one answer per line inside the cell (18 Oct), instead of "L1 a=3 | L2 b=2"
+  const lines = r.answers.map(a => `L${a.line} ${a.variable} = ${a.answer}${a.auto ? " (auto)" : a.ok ? "" : " (wrong)"}`).join("\n");
   return { kind: right ? "right" : (r.matches_i_tagged.length + r.matches_ii_tagged.length ? "match" : "none"),
-    cells: [new Date(r.when).toLocaleString(), r.name, r.exercise, r.result, w.line ?? "", w.variable ?? "", w.answer ?? "", w.correct ?? "",
-      r.matches_i_tagged.join(", "), r.matches_ii_tagged.join(", "), r.output.answer, r.same_output_tagged.join(", "), lines] };
+    cells: [new Date(r.when).toLocaleString(), r.name, r.exercise, r.result, r.output.answer, r.same_output_tagged.join(", "),
+      w.line ?? "", w.variable ?? "", w.answer ?? "", w.correct ?? "", r.matches_ii_tagged.join(", "), r.note || "", lines,
+      r.matches_i_tagged.join(", ")] };
 }
 function renderFull() {
   if (!history.length) { $("logall").innerHTML = `<p class="empty">Every finished exercise is added here, one row each, like the Google Sheet.</p>`; return; }
   const legend = `<div class="note legend"><span><span class="sw k-right"></span>Right</span>
-    <span><span class="sw k-match"></span>Wrong, a misconception matches</span>
-    <span><span class="sw k-none"></span>Wrong, no match</span></div>`;
+    <span><span class="sw k-match"></span>Wrong, same answer as a misconception</span>
+    <span><span class="sw k-none"></span>Wrong, no misconception gives this answer</span></div>`;
   $("logall").innerHTML = legend + `<div class="tablebox"><table><thead><tr>${FULL_COLS.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
     history.map(h => `<tr class="k-${h.kind}">${h.cells.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
 }
-function fullText() { return [FULL_COLS, ...history.map(h => h.cells)].map(r => r.join("\t")).join("\n"); }
+function fullText() { return [FULL_COLS, ...history.map(h => h.cells.map(c => String(c).replace(/\n/g, "; ")))].map(r => r.join("\t")).join("\n"); }
 let logTab = "now";
 function showLogTab(tab) {
   logTab = tab;
@@ -571,7 +584,7 @@ renderFull();
 
 async function save() {
   history.unshift(fullRow(record()));
-  try { localStorage.setItem("tracer-history", JSON.stringify(history.slice(0, 300))); } catch (e) {}
+  try { localStorage.setItem("tracer-history-v3", JSON.stringify(history.slice(0, 300))); } catch (e) {}
   renderFull();
   const st = $("savestate");
   if (SHEET_URL && SHEET_URL.startsWith("https://")) {
