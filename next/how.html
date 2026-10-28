@@ -99,6 +99,29 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
     </table></div>
   </details>
 
+  <details class="more"><summary>The 10 criteria (the numbers 1–10 in the Summary tab)</summary>
+    <p class="muted" style="margin:0 0 6px">Each question checks one criterion. In the Sheet: ✓ good · ✗ to work on · ✗● correct once since the last mistake · – not known yet. The last column shows which misconceptions give a wrong answer at that kind of question, so a ✗ there may come from one of them.</p>
+    <div class="tablewrap"><table>
+      <tr><th>#</th><th>Criterion</th><th>Example</th><th>Broken by</th></tr>
+      <tr><td colspan="4" class="muted">Using variables in a calculation</td></tr>
+      <tr><td>1</td><td>Uses the current value of a variable in an expression</td><td class="mono">a = 3; b = a + 2 → 5</td><td class="muted">none of the list</td></tr>
+      <tr><td>2</td><td>Stores the result of a calculation, not the calculation</td><td class="mono">b = a + 2 → 5, not "a+2"</td><td class="mono">M4, N1</td></tr>
+      <tr><td>3</td><td>Multiplication of a number and a string</td><td class="mono">2 * "OK" → OKOK</td><td class="muted">not in this trial (the 8 exercises use numbers only)</td></tr>
+      <tr><td colspan="4" class="muted">Giving a new value</td></tr>
+      <tr><td>4</td><td>Keeps the value assigned to a variable</td><td class="mono">a = 3; print(a) → 3</td><td class="mono">X1</td></tr>
+      <tr><td>5</td><td>A new assignment replaces the old value</td><td class="mono">x = 4; x = 9 → 9</td><td class="mono">M1, M3, M2</td></tr>
+      <tr><td>6</td><td>A variable keeps its value when another one changes</td><td class="mono">b = a + 2; a = 10 → b still 5</td><td class="mono">M5, M4</td></tr>
+      <tr><td colspan="4" class="muted">Same variable on both sides</td></tr>
+      <tr><td>7</td><td>Uses the old value when the variable is on both sides</td><td class="mono">a = 5; a = 2 * a → 10</td><td class="mono">M1, M2, M3, M4, N1</td></tr>
+      <tr><td colspan="4" class="muted">Copying a variable</td></tr>
+      <tr><td>8</td><td>Assignment copies the value of another variable</td><td class="mono">p = q → p gets q's value</td><td class="mono">M4, M1, M2, M3, X19</td></tr>
+      <tr><td colspan="4" class="muted">print</td></tr>
+      <tr><td>9</td><td>print shows the value, not the name</td><td class="mono">print(a) → 3, not "a"</td><td class="mono">X1</td></tr>
+      <tr><td>10</td><td>print shows several values in the right order</td><td class="mono">print(a, b) → 10 30</td><td class="mono">X1, M5</td></tr>
+    </table></div>
+    <p class="muted" style="margin:6px 0 0">"Broken by" is counted from the exercises: the misconceptions whose answer differs from the correct one at questions of that criterion (most often first). X1 can break almost every criterion; it is listed only where it is the main one. No misconception of the list changes criterion 1: a ✗ there is a calculation slip or not explained yet. Criterion 3 stays empty in this trial.</p>
+  </details>
+
   <section style="display:grid;gap:10px">
     <h2>Kinds of exercises</h2>
     <ul class="rules">
