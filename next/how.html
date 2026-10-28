@@ -78,10 +78,10 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
     </div>
     <details class="more"><summary>More about the help</summary><ul>
       <li>Each wrong answer is compared with what every misconception would answer there ("fits M3, X19").</li>
-      <li><b>Help:</b> smaller programs (the right side alone, the numbers alone …) to find where right turns into wrong; this also tells apart misconceptions that give the same answer.</li>
+      <li>The help also tells apart misconceptions that give the same answer.</li>
       <li>One misconception left: <i>suspected</i>. The follow-up tests it in another kind of line; the same mistake there: <i>confirmed</i>.</li>
       <li><b>Check:</b> only when two or more are still left, the same line with new numbers, to tell them apart.</li>
-      <li>The log says, for every answer, what it fits, and under the result, why (what ruled each misconception out).</li>
+      <li>The log shows what each answer fits, and why a misconception was ruled out.</li>
     </ul></details>
   </section>
 
@@ -93,7 +93,7 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
       <tr><td class="mono">M4</td><td>a variable stores the expression as text</td><td class="mono">b = a + 1 → b is "a+1"</td></tr>
       <tr><td class="mono">M5</td><td>a variable keeps the formula and follows its variables</td><td class="mono">b = a + 2; a = 10 → b is 12</td></tr>
       <tr><td class="mono">M2</td><td>a new value is added to the old one <span class="muted">(watch list)</span></td><td class="mono">x = 4; x = 9 → x is 13</td></tr>
-      <tr><td class="mono">X19</td><td>assignment copies the wrong way <span class="muted">(watch list)</span></td><td class="mono">x = y → y gets x</td></tr>
+      <tr><td class="mono">X19</td><td>assignment copies the wrong way <span class="muted">(watch list)</span></td><td class="mono">x = y → y gets x's value</td></tr>
       <tr><td class="mono">X1</td><td>print shows what is written <span class="muted">(watch list)</span></td><td class="mono">print(a) → "a"</td></tr>
       <tr><td class="mono">N1</td><td>a variable keeps the calculation with the numbers put in <span class="muted">(watch list)</span></td><td class="mono">b = a + 1 → b is "3+1"</td></tr>
       <tr><td class="mono">N2</td><td>wrong only when the same name is on both sides <span class="muted">(found by its behaviour)</span></td><td class="mono">a = 2 * a → a stays 2</td></tr>
@@ -120,7 +120,7 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
       <tr><td>9</td><td>print shows the value, not the name</td><td class="mono">print(a) → 3, not "a"</td><td class="mono">X1</td></tr>
       <tr><td>10</td><td>print shows several values in the right order</td><td class="mono">print(a, b) → 10 30</td><td class="mono">X1, M5</td></tr>
     </table></div>
-    <p class="muted" style="margin:6px 0 0">"Broken by" is counted from the exercises: the misconceptions whose answer differs from the correct one at questions of that criterion (most often first). X1 can break almost every criterion; it is listed only where it is the main one. No misconception of the list changes criterion 1: a ✗ there is a calculation slip or not explained yet. Criterion 3 stays empty in this trial.</p>
+    <p class="muted" style="margin:6px 0 0">X1 can break almost every criterion; it is listed only where it is the main one. No misconception of the list breaks criterion 1: a ✗ there is a calculation slip or not explained yet.</p>
   </details>
 
   <section style="display:grid;gap:10px">
@@ -129,12 +129,12 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
       <li><b>8 main exercises</b>, the same for everyone, easy to hard.</li>
       <li><b>At most 2 follow-ups</b> after a main exercise, only from its mistake. A new mistake in a follow-up is only logged.</li>
       <li>A misconception tested in <b>3 exercises</b> gets no more follow-ups.</li>
-      <li>In a follow-up, a mistake already <b>confirmed</b> gets no help and no check.</li>
+      <li>In a follow-up, a mistake already <b>confirmed</b> gets no help questions.</li>
     </ul>
     <div class="tablewrap"><table>
       <tr><th>Kind</th><th>When, and what it tells</th><th>Example</th></tr>
       <tr><td><b>Bank</b><br><span class="muted">"One more like this"</span></td><td>A named misconception (M1, M4, M5 …). Does it come again in <b>another kind of line</b>?</td><td class="mono">count = 2; level = count + 7; print(level)</td></tr>
-      <tr><td><b>Live</b></td><td>No name, N1 or N2, or no bank exercise left. The lines needed for the wrong line, new names and numbers, one question. Does the same mistake come again?</td><td class="mono">p = 7; q = 3; r = p - q; print(r)</td></tr>
+      <tr><td><b>Live</b></td><td>No name yet, N1, N2, or no bank exercise left. Made from the wrong line with new names and numbers; one question. Does the same mistake come again?</td><td class="mono">p = 7; q = 3; r = p - q; print(r)</td></tr>
       <tr><td><b>Small: calculation</b></td><td>Wrong with the numbers alone (<code>print(5 - 4)</code> → 2). A slip, or maths?</td><td class="mono">print(7 - 3)</td></tr>
       <tr><td><b>Small: print order</b></td><td>The right values in another order (<code>1 2</code> for <code>2 1</code>). A slip, or printing in another order?</td><td class="mono">a = 7; b = 3; print(a, b)</td></tr>
       <tr><td><b>Hidden check</b></td><td>A misconception stopped the learner before another one's question (M1 at <code>a = 10</code> hides M5 at <code>b</code>). The questions the first one gets wrong are not asked.</td><td class="mono">steps = 7; points = steps + 3; steps = 1; print(points)</td></tr>
