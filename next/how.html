@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
+<title>How It Works</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap"><style>html:root { --bg: #fbfcfe; --paper: #fbfcfe; --surface: #ffffff; --panel: #ffffff; --ink: #1e2a44; --muted: #5d6680; --line: #dde2ec; --accent: #24407a; --accent-soft: #e7ecf7; --code-bg: #f3f5fa; --code: #f3f5fa; --f-body: "Atkinson Hyperlegible", "IBM Plex Sans", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace; }@media (prefers-color-scheme: dark) { html:root:not([data-theme="light"]) { --bg: #121826; --paper: #121826; --surface: #182032; --panel: #182032; --ink: #e6eaf3; --muted: #9aa3b8; --line: #2b354b; --accent: #9db6ef; --accent-soft: #223152; --code-bg: #141b2a; --code: #141b2a; } }html:root[data-theme="dark"] { --bg: #121826; --paper: #121826; --surface: #182032; --panel: #182032; --ink: #e6eaf3; --muted: #9aa3b8; --line: #2b354b; --accent: #9db6ef; --accent-soft: #223152; --code-bg: #141b2a; --code: #141b2a; }h1, h2, h3 { font-family: var(--f-body); }</style>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a reading page — the flow of one exercise, then how extra exercises are made and chosen, then the 8 templates. */
+:root {
+  --bg: #f3f5f6; --surface: #ffffff; --ink: #16212b; --muted: #5b6874; --line: #d9dfe3;
+  --accent: #0b6e79; --accent-soft: #e0f0f1; --code-bg: #f1f4f5;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1519; --surface: #172026; --ink: #e4eaee; --muted: #9aa8b2; --line: #2a363e; --accent: #5cc3cc; --accent-soft: #143238; --code-bg: #121a1f; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1519; --surface: #172026; --ink: #e4eaee; --muted: #9aa8b2; --line: #2a363e; --accent: #5cc3cc; --accent-soft: #143238; --code-bg: #121a1f; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; }
+h1 { font-size: 24px; font-weight: 600; margin: 0; }
+h2 { font-size: 18px; font-weight: 600; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+.muted { color: var(--muted); }
+code, pre { font-family: var(--f-mono); font-size: 13px; }
+pre { background: var(--code-bg); border-radius: 6px; padding: 6px 8px; margin: 0; overflow-x: auto; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; counter-reset: s; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 4px; align-content: start; }
+.step::before { counter-increment: s; content: "Step " counter(s); font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: .03em; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 13px; }
+td.mono { font-family: var(--f-mono); white-space: nowrap; }
+details.more { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; }
+details.more > summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+details.more[open] > summary { margin-bottom: 8px; }
+details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.flow .step p { font-size: 14px; }
+</style>
+<style>
+.sitenav { display: flex; flex-wrap: wrap; gap: 6px 6px; align-items: center; justify-content: center; max-width: 1280px; margin: 0 auto 20px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--line); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 17px; }
+.sitenav .brand { font-weight: 600; margin-right: 14px; color: var(--ink); }
+.sitenav .brand small { font-weight: 400; color: var(--muted); }
+.sitenav a { color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 6px; }
+.sitenav a:hover { color: var(--ink); background: var(--line); }
+@media (max-width: 600px) { .sitenav { font-size: 14px; gap: 2px; margin-bottom: 14px; } .sitenav a { padding: 4px 8px; } .sitenav .brand { width: 100%; text-align: center; margin: 0 0 4px; } }
+.sitenav a[aria-current="page"] { color: var(--accent); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+.sitenav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+<nav class="sitenav" aria-label="Pages">
+  <span class="brand">Line tracer <small>· trial</small></span>
+  <a href="next.html" data-page="next">Exercises</a>
+  <a href="how.html" data-page="how" aria-current="page">How it works</a>
+</nav>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <h1>How it works</h1>
+    <p class="muted">The learner reads short Python programs and types what they print. When an answer is wrong, the tool finds which misconception explains it and chooses the next exercise from that. This is the trial version; the page you used before is unchanged.</p>
+    <p class="muted">In the first trial <b>Feedback is off</b>: the page does not say which answer is wrong, so the follow-ups measure but do not teach.</p>
+  </header>
+
+  <section style="display:grid;gap:10px">
+    <h2>One exercise</h2>
+    <div class="flow">
+      <div class="step"><h3>Type the output</h3><p class="muted">Right: next exercise.</p></div>
+      <div class="step"><h3>Line by line</h3><p class="muted">Wrong: one question per variable, until the first wrong answer.</p></div>
+      <div class="step"><h3>Help and check</h3><p class="muted">Smaller programs, then the same line with new numbers.</p></div>
+      <div class="step"><h3>Next exercise</h3><p class="muted">From the mistake (kinds below).</p></div>
+      <div class="step"><h3>Log</h3><p class="muted">Google Sheet: one row per exercise and per student.</p></div>
+    </div>
+    <details class="more"><summary>More about the help and the check</summary><ul>
+      <li>Each wrong answer is compared with what every misconception would answer there ("fits M3, X19").</li>
+      <li><b>Help:</b> smaller programs (the right side alone, the numbers alone …) to find where right turns into wrong; this also tells apart misconceptions that give the same answer.</li>
+      <li><b>Check:</b> the same line with new numbers, twice. The same mistake both times: <i>confirmed (2 of 2)</i>.</li>
+      <li>The log says, for every answer, what it fits, and under the result, why (what ruled each misconception out).</li>
+    </ul></details>
+  </section>
+
+  <details class="more"><summary>The misconceptions (codes used below)</summary>
+    <div class="tablewrap" style="margin-top:4px"><table>
+      <tr><th>Code</th><th>The learner thinks …</th><th>Example</th></tr>
+      <tr><td class="mono">M1</td><td>a variable holds several values</td><td class="mono">x = 4; x = 9 → x is "4 9"</td></tr>
+      <tr><td class="mono">M3</td><td>a variable keeps its first value</td><td class="mono">x = 4; x = 9 → x is 4</td></tr>
+      <tr><td class="mono">M4</td><td>a variable stores the expression as text</td><td class="mono">b = a + 1 → b is "a+1"</td></tr>
+      <tr><td class="mono">M5</td><td>a variable keeps the formula and follows its variables</td><td class="mono">b = a + 2; a = 10 → b is 12</td></tr>
+      <tr><td class="mono">M2</td><td>a new value is added to the old one <span class="muted">(watch list)</span></td><td class="mono">x = 4; x = 9 → x is 13</td></tr>
+      <tr><td class="mono">X19</td><td>assignment copies the wrong way <span class="muted">(watch list)</span></td><td class="mono">x = y → y gets x</td></tr>
+      <tr><td class="mono">X1</td><td>print shows what is written <span class="muted">(watch list)</span></td><td class="mono">print(a) → "a"</td></tr>
+      <tr><td class="mono">N1</td><td>a variable keeps the calculation with the numbers put in <span class="muted">(watch list)</span></td><td class="mono">b = a + 1 → b is "3+1"</td></tr>
+      <tr><td class="mono">N2</td><td>wrong only when the same name is on both sides <span class="muted">(found by its behaviour)</span></td><td class="mono">a = 2 * a → a stays 2</td></tr>
+    </table></div>
+  </details>
+
+  <section style="display:grid;gap:10px">
+    <h2>Kinds of exercises</h2>
+    <ul class="rules">
+      <li><b>8 main exercises</b>, the same for everyone, easy to hard.</li>
+      <li><b>At most 2 follow-ups</b> after a main exercise, only from its mistake. A new mistake in a follow-up is only logged.</li>
+      <li>A misconception tested in <b>3 exercises</b> gets no more follow-ups.</li>
+      <li>In a follow-up, a mistake already <b>confirmed</b> gets no help and no check.</li>
+    </ul>
+    <div class="tablewrap"><table>
+      <tr><th>Kind</th><th>When, and what it tells</th><th>Example</th></tr>
+      <tr><td><b>Bank</b><br><span class="muted">"One more like this"</span></td><td>A named misconception (M1, M4, M5 …). Does it come again in <b>another kind of line</b>?</td><td class="mono">count = 2; level = count + 7; print(level)</td></tr>
+      <tr><td><b>Live</b></td><td>No name, N1 or N2, or no bank exercise left. The lines needed for the wrong line, new names and numbers, one question. Does the same mistake come again?</td><td class="mono">p = 7; q = 3; r = p - q; print(r)</td></tr>
+      <tr><td><b>Small: calculation</b></td><td>Wrong with the numbers alone (<code>print(5 - 4)</code> → 2). A slip, or maths?</td><td class="mono">print(7 - 3)</td></tr>
+      <tr><td><b>Small: print order</b></td><td>The right values in another order (<code>1 2</code> for <code>2 1</code>). A slip, or printing in another order?</td><td class="mono">a = 7; b = 3; print(a, b)</td></tr>
+      <tr><td><b>Hidden check</b></td><td>A confirmed misconception stopped the learner before another one's question (M1 at <code>a = 10</code> hides M5 at <code>b</code>). The questions the confirmed one gets wrong are not asked.</td><td class="mono">steps = 7; points = steps + 3; steps = 1; print(points)</td></tr>
+      <tr><td><b>Same kind</b></td><td>An error no misconception explains, in a bank exercise. Does it come again at the same place?</td><td class="mono">another exercise of the same template</td></tr>
+    </table></div>
+    <details class="more"><summary>Not an exercise, and planned after the trial</summary><ul>
+      <li><b>After the help:</b> the tool waits for a line of the same kind in a later exercise, to see whether the learner solves it alone.</li>
+      <li><b>Not known yet:</b> a question after the first wrong answer is never asked; what it would show is marked "–" in the Summary, not taken as right.</li>
+      <li><b>Planned, with Feedback on:</b> small practice exercises for a misconception already found (for example <code>x = 4; x = 9; print(x)</code> for M1), and a "Harder" set (a text times a number, decimals).</li>
+    </ul></details>
+  </section>
+
+  <section style="display:grid;gap:10px">
+    <h2>How the bank exercises are made</h2>
+    <div class="cards">
+      <div class="card"><h3>1. Templates with blanks</h3><p>11 templates, 3 to 6 lines, such as <code>{v} = {n1}; {v} = {n2}; print({v})</code> (Kumar, 2005).</p></div>
+      <div class="card"><h3>2. Filling the blanks</h3><p>Names from 10 neutral words (<code>total</code>, <code>count</code>, <code>score</code>, <code>price</code>, <code>age</code>, <code>size</code>, <code>level</code>, <code>points</code>, <code>steps</code>, <code>speed</code>), so learners cannot guess from the name. Numbers 1 to 9, all different, so the arithmetic is easy.</p></div>
+      <div class="card"><h3>3. Two checks</h3><p>Kept only if each target misconception makes the output <b>wrong</b>, and <b>no other</b> misconception gives the same wrong output. Otherwise drawn again.</p></div>
+      <div class="card"><h3>4. A fixed bank</h3><p>5 exercises per template, <b>55</b> in all, in a file that can be read first. Another template comes first; a learner meets each exercise at most once.</p></div>
+    </div>
+    <details class="more"><summary>The 11 templates</summary>
+      <div class="tablewrap" style="margin-top:4px"><table>
+        <tr><th>Kind</th><th>Lines</th><th>Targets</th><th>Template</th></tr>
+        <tr><td>reassign</td><td>3</td><td class="mono">M1, M3, M2</td><td class="mono">{v} = {n1}; {v} = {n2}; print({v})</td></tr>
+<tr><td>expression on the right</td><td>3</td><td class="mono">M4</td><td class="mono">{v} = {n1}; {w} = {v} + {n2}; print({w})</td></tr>
+<tr><td>change after use</td><td>4</td><td class="mono">M5</td><td class="mono">{v} = {n1}; {w} = {v} + {n2}; {v} = {n3}; print({w})</td></tr>
+<tr><td>reassign, then copy</td><td>5</td><td class="mono">M1, M3, X19</td><td class="mono">{v} = {n1}; {v} = {n2}; {w} = {n3}; {v} = {w}; print({v}, {w})</td></tr>
+<tr><td>swap with a temporary</td><td>6</td><td class="mono">M3, X19</td><td class="mono">{v} = {n1}; {w} = {n2}; {t} = {v}; {v} = {w}; {w} = {t}; print({v}, {w})</td></tr>
+<tr><td>two variables on the right</td><td>4</td><td class="mono">M4</td><td class="mono">{v} = {n1}; {w} = {n2}; {t} = {v} * {w}; print({t})</td></tr>
+<tr><td>second operand changes</td><td>5</td><td class="mono">M5</td><td class="mono">{v} = {n1}; {w} = {n2}; {t} = {v} + {w}; {w} = {n3}; print({t})</td></tr>
+<tr><td>reassign from a variable</td><td>4</td><td class="mono">M1, M2</td><td class="mono">{v} = {n1}; {w} = {n2}; {v} = {w}; print({v})</td></tr>
+<tr><td>same name on both sides</td><td>3</td><td class="mono">M1, M3, M2</td><td class="mono">{v} = {n1}; {v} = {v} + {n2}; print({v})</td></tr>
+<tr><td>print a variable</td><td>3</td><td class="mono">X1</td><td class="mono">{v} = {n1}; {w} = {n2}; print({v})</td></tr>
+<tr><td>print a calculation</td><td>3</td><td class="mono">X1</td><td class="mono">{v} = {n1}; {w} = {n2}; print({v} + {w})</td></tr>
+      </table></div>
+      <p class="muted" style="margin-top:8px">The numbers of templates and exercises, the names and the two checks were chosen for this project. Larger numbers, distractor lines and texts were tried and are not in the bank.</p>
+    </details>
+  </section>
+</div>
+
+</body></html>
