@@ -253,7 +253,7 @@ const DATA = {"main": ["M1", "M3", "M4", "M5"], "watch": ["M2", "X10", "X17", "X
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbwvu1cqzbqVK5BWPoWRnTVIRS5I1vNSnddmGHrLJzeoHj57S1RJ5jfBEXdSzR1xv1uDHA/exec";
 // X10, X17, X18 need if or loops, which these exercises do not have, so they are left out.
 const MAIN = DATA.main, WATCH = DATA.watch.filter(m => ["M2", "X19", "X1", "N1"].includes(m)).concat(["N2"]), ALL = MAIN.concat(WATCH);   // N2: no mode, found by its behaviour (26 Oct, choice A)   // X1 added 26 Oct (trial page data only)
-const VERSION = "v4 · a6e13ae+ · next";   // filled in by tools/build_web.py
+const VERSION = "v4 · 931209a+ · next";   // filled in by tools/build_web.py
 const EXS = DATA.exercises;
 
 // Same comparison as minterp/stepwise.py: normalize(), same(), same_output().
@@ -4559,6 +4559,66 @@ render = function () {
 .lay-menu #startover:hover { text-decoration: underline; }
 body.student .lay-menu .mn-test { display: none !important; }`;
   document.head.append(st);
+})();
+
+// ---------------------------------------------------------------- slower, and said (28 Oct, Ngoc: "nhanh vậy ai nhìn kịp")
+// "Play the whole exercise" types each answer letter by letter and waits about 1.5 s per answer ⚠ ours;
+// while it plays the button says "Stop".  A line under "Play as" says what the two buttons do.
+// (autoPlay() stays fast: the page tests use it.)
+let autoWatching = null;
+function autoTypeSlow(text, done) {
+  const o = $("outans"), a = $("answer");
+  const box = o && o.offsetParent && !o.disabled ? o : a && a.offsetParent ? a : null;
+  if (!box) { const s = [...document.querySelectorAll("button")].find(b => /^Skip$/.test(b.textContent.trim())); if (s) { s.click(); done(true); } else done(false); return; }
+  const t = String(text); let i = 0; box.value = ""; box.focus();
+  const step = () => {
+    if (!autoWatching) { done(false); return; }
+    box.value = t.slice(0, ++i);
+    if (i < t.length) { setTimeout(step, Math.max(40, Math.min(120, 700 / Math.max(1, t.length)))); return; }
+    setTimeout(() => { if (!autoWatching) { done(false); return; } autoType(t); done(true); }, 450);
+  };
+  step();
+}
+function autoStopChip(on) {
+  let c = document.getElementById("autostop");
+  if (!on) { if (c) c.remove(); return; }
+  if (c) return;
+  c = document.createElement("button"); c.type = "button"; c.id = "autostop"; c.className = "btn ghost"; c.textContent = "■ Stop playing";
+  c.onclick = () => { autoWatching = null; const b = $("autoall"); if (b) b.textContent = "Play the whole exercise"; autoStopChip(false); };
+  const qp = document.querySelector(".qpanel"); (qp || document.body).prepend(c);
+}
+function autoWatch() {
+  const btn = $("autoall");
+  if (autoWatching) { autoWatching = null; if (btn) btn.textContent = "Play the whole exercise"; autoStopChip(false); return; }
+  autoWatching = {}; if (btn) btn.textContent = "Stop";
+  // close the menu so that the exercise can be watched; the Stop button stays in the menu, and a small one appears
+  const menu = document.querySelector(".lay-menu"); if (menu) menu.hidden = true;
+  autoStopChip(true);
+  let n = 0;
+  const tick = () => {
+    if (!autoWatching || n++ > 60) { autoWatching = null; if (btn) btn.textContent = "Play the whole exercise"; autoStopChip(false); return; }
+    const why0 = typeof why !== "undefined" && why && !why.done;
+    const r = why0 ? { correct: "" } : autoAnswers();
+    if (!r) { autoWatching = null; if (btn) btn.textContent = "Play the whole exercise"; autoStopChip(false); return; }
+    autoTypeSlow(why0 ? "" : (r[autoMode] != null ? r[autoMode] : r.correct), ok => { if (ok) setTimeout(tick, 900); else { autoWatching = null; if (btn) btn.textContent = "Play the whole exercise"; autoStopChip(false); } });
+  };
+  tick();
+}
+(function () {
+  const one = $("autoone"), all = $("autoall"), mode = $("automode");
+  if (one) { one.textContent = "Answer one question"; one.title = "types the answer of the student chosen in Play as, for this question only"; }
+  if (all) { all.textContent = "Play the whole exercise"; all.title = "answers every question of this exercise, slowly; click again to stop"; all.onclick = () => autoWatch(); }
+  if (mode) {
+    const row = mode.closest(".mn-row") || mode.parentElement;
+    if (row && !document.querySelector(".mn-hint")) row.insertAdjacentHTML("afterend", `<div class="mn-hint mn-test">Answers like a student who has this misconception (or "correct").</div>`);
+  }
+  const st = document.createElement("style");
+  st.textContent = `.lay-menu .mn-hint { padding: 0 14px 6px; font-size: 12px; color: var(--muted); }
+#autostop { margin: 10px 16px 0; font-size: 13px; }`;
+  document.head.append(st);
+  // a new exercise or Restart stops it
+  const startBeforeWatch = start;
+  start = function () { if (autoWatching) { autoWatching = null; if ($("autoall")) $("autoall").textContent = "Play the whole exercise"; autoStopChip(false); } startBeforeWatch(); };
 })();
 
 // ---------------------------------------------------------------- the log in the test view (28 Oct, Ngoc)
