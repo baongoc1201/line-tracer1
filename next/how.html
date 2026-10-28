@@ -72,14 +72,15 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
     <div class="flow">
       <div class="step"><h3>Type the output</h3><p class="muted">Right: next exercise.</p></div>
       <div class="step"><h3>Line by line</h3><p class="muted">Wrong: one question per variable, until the first wrong answer.</p></div>
-      <div class="step"><h3>Help and check</h3><p class="muted">Smaller programs, then the same line with new numbers.</p></div>
+      <div class="step"><h3>Help</h3><p class="muted">Smaller programs, to find where right turns into wrong.</p></div>
       <div class="step"><h3>Next exercise</h3><p class="muted">From the mistake (kinds below).</p></div>
       <div class="step"><h3>Log</h3><p class="muted">Google Sheet: one row per exercise and per student.</p></div>
     </div>
-    <details class="more"><summary>More about the help and the check</summary><ul>
+    <details class="more"><summary>More about the help</summary><ul>
       <li>Each wrong answer is compared with what every misconception would answer there ("fits M3, X19").</li>
       <li><b>Help:</b> smaller programs (the right side alone, the numbers alone …) to find where right turns into wrong; this also tells apart misconceptions that give the same answer.</li>
-      <li><b>Check:</b> the same line with new numbers, twice. The same mistake both times: <i>confirmed (2 of 2)</i>.</li>
+      <li>One misconception left: <i>suspected</i>. The follow-up tests it in another kind of line; the same mistake there: <i>confirmed</i>.</li>
+      <li><b>Check:</b> only when two or more are still left, the same line with new numbers, to tell them apart.</li>
       <li>The log says, for every answer, what it fits, and under the result, why (what ruled each misconception out).</li>
     </ul></details>
   </section>
@@ -136,7 +137,7 @@ details.more ul, ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 4
       <tr><td><b>Live</b></td><td>No name, N1 or N2, or no bank exercise left. The lines needed for the wrong line, new names and numbers, one question. Does the same mistake come again?</td><td class="mono">p = 7; q = 3; r = p - q; print(r)</td></tr>
       <tr><td><b>Small: calculation</b></td><td>Wrong with the numbers alone (<code>print(5 - 4)</code> → 2). A slip, or maths?</td><td class="mono">print(7 - 3)</td></tr>
       <tr><td><b>Small: print order</b></td><td>The right values in another order (<code>1 2</code> for <code>2 1</code>). A slip, or printing in another order?</td><td class="mono">a = 7; b = 3; print(a, b)</td></tr>
-      <tr><td><b>Hidden check</b></td><td>A confirmed misconception stopped the learner before another one's question (M1 at <code>a = 10</code> hides M5 at <code>b</code>). The questions the confirmed one gets wrong are not asked.</td><td class="mono">steps = 7; points = steps + 3; steps = 1; print(points)</td></tr>
+      <tr><td><b>Hidden check</b></td><td>A misconception stopped the learner before another one's question (M1 at <code>a = 10</code> hides M5 at <code>b</code>). The questions the first one gets wrong are not asked.</td><td class="mono">steps = 7; points = steps + 3; steps = 1; print(points)</td></tr>
       <tr><td><b>Same kind</b></td><td>An error no misconception explains, in a bank exercise. Does it come again at the same place?</td><td class="mono">another exercise of the same template</td></tr>
     </table></div>
     <details class="more"><summary>Not an exercise, and planned after the trial</summary><ul>
